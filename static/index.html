@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Découpeur de vidéo</title>
+<style>
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#f3f5f7;color:#101418}
+main{max-width:560px;margin:0 auto;padding:28px 18px}
+h1{font-size:2rem;margin:0 0 6px}
+.box{background:#fff;border:1px solid #d9dee3;border-radius:14px;padding:16px;display:grid;gap:14px}
+label{display:grid;gap:6px;font-weight:600}
+input{font:inherit;padding:10px;border:1px solid #d9dee3;border-radius:8px}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:13px;background:#2450ff;color:#fff}
+button:disabled{opacity:.45}
+#msg{margin:14px 0;color:#5b6672}
+a.dl{display:block;text-align:center;background:#101418;color:#fff;padding:13px;border-radius:10px;text-decoration:none;font-weight:700}
+</style></head><body><main>
+<h1>Découpeur de vidéo</h1>
+<p>Choisis une vidéo : elle est coupée en clips de même durée, réunis dans un fichier zip.</p>
+<div class="box">
+<label>Vidéo<input id="file" type="file" accept="video/*"></label>
+<label>Durée de chaque clip (secondes)<input id="len" type="number" min="1" max="600" value="10"></label>
+<button id="go">Découper la vidéo</button>
+</div>
+<div id="msg" role="status"></div>
+<div id="out"></div>
+<script>
+const $=id=>document.getElementById(id);
+$('go').onclick=async()=>{
+  const f=$('file').files[0];
+  if(!f){$('msg').textContent='Choisis d\u2019abord une vidéo.';return}
+  $('go').disabled=true;$('out').innerHTML='';
+  $('msg').textContent='Envoi et découpage en cours… ça peut prendre quelques minutes.';
+  const fd=new FormData();fd.append('video',f);fd.append('seconds',$('len').value||10);
+  try{
+    const r=await fetch('/cut',{method:'POST',body:fd});
+    if(!r.ok)throw new Error();
+    const url=URL.createObjectURL(await r.blob());
+    $('msg').textContent='Terminé !';
+    $('out').innerHTML='<a class="dl" download="clips.zip" href="'+url+'">Télécharger les clips (zip)</a>';
+  }catch(e){$('msg').textContent='Le découpage a échoué. Essaie avec une vidéo plus courte.'}
+  $('go').disabled=false;
+};
+</script></main></body></html>
