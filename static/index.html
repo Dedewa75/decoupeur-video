@@ -1,43 +1,313 @@
 <!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Découpeur de vidéo</title>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Découpeur — Clips pour TikTok, Shorts &amp; Reels</title>
 <style>
-body{margin:0;font:16px/1.5 system-ui,sans-serif;background:#f3f5f7;color:#101418}
-main{max-width:560px;margin:0 auto;padding:28px 18px}
-h1{font-size:2rem;margin:0 0 6px}
-.box{background:#fff;border:1px solid #d9dee3;border-radius:14px;padding:16px;display:grid;gap:14px}
-label{display:grid;gap:6px;font-weight:600}
-input{font:inherit;padding:10px;border:1px solid #d9dee3;border-radius:8px}
-button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:13px;background:#2450ff;color:#fff}
-button:disabled{opacity:.45}
-#msg{margin:14px 0;color:#5b6672}
-a.dl{display:block;text-align:center;background:#101418;color:#fff;padding:13px;border-radius:10px;text-decoration:none;font-weight:700}
-</style></head><body><main>
-<h1>Découpeur de vidéo</h1>
-<p>Choisis une vidéo : elle est coupée en clips de même durée, réunis dans un fichier zip.</p>
-<div class="box">
-<label>Vidéo<input id="file" type="file" accept="video/*"></label>
-<label>Durée de chaque clip (secondes)<input id="len" type="number" min="1" max="600" value="10"></label>
-<button id="go">Découper la vidéo</button>
+:root{
+  --bg:#0a0a0d; --bg2:#111117; --card:#15151d; --line:#25252f;
+  --ink:#f2f2f6; --mut:#9797a8; --acc:#7c5cff; --acc2:#5c8bff;
+  --ok:#3ddc97; --err:#ff6b6b;
+  box-sizing:border-box;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:16px/1.55 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+a{color:inherit}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header{padding:18px 0;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+.logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--acc),var(--acc2));
+  display:flex;align-items:center;justify-content:center;font-size:18px}
+header .name{font-weight:700;font-size:1.05rem;letter-spacing:-.01em}
+.hero{padding:56px 0 28px;text-align:center}
+.hero h1{font-size:clamp(1.8rem,6vw,2.6rem);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em;
+  background:linear-gradient(135deg,#fff,#b9b9ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--mut);max-width:480px;margin:0 auto 18px;font-size:1.02rem}
+.badges{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;color:var(--mut);font-size:.88rem;margin-bottom:8px}
+.badges span{color:var(--ok)}
+section{padding:36px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;
+  box-shadow:0 20px 60px -30px rgba(124,92,255,.25)}
+.drop{border:1.5px dashed var(--line);border-radius:14px;padding:34px 18px;text-align:center;
+  cursor:pointer;transition:.2s border-color,.2s background}
+.drop:hover,.drop.drag{border-color:var(--acc);background:rgba(124,92,255,.06)}
+.drop .ic{font-size:2rem;margin-bottom:8px}
+.drop b{display:block;margin-bottom:2px}
+.drop small{color:var(--mut)}
+.drop input{display:none}
+.file-info{display:none;align-items:center;gap:12px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:12px;padding:12px 14px;margin-top:14px}
+.file-info.show{display:flex}
+.file-info .ic2{font-size:1.4rem}
+.file-info .meta{flex:1;min-width:0}
+.file-info .meta b{display:block;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-info .meta span{color:var(--mut);font-size:.82rem}
+.file-info button{background:none;border:1px solid var(--line);color:var(--mut);border-radius:8px;
+  padding:6px 10px;font-size:.8rem;cursor:pointer}
+.field{margin-top:20px}
+.field label{display:block;font-weight:600;margin-bottom:10px;font-size:.94rem}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.quick button{background:var(--bg2);border:1px solid var(--line);color:var(--ink);border-radius:10px;
+  padding:8px 14px;font-size:.88rem;cursor:pointer;transition:.15s}
+.quick button.active{background:var(--acc);border-color:var(--acc);color:#fff}
+.custom-len{display:flex;align-items:center;gap:8px}
+.custom-len input{width:90px;background:var(--bg2);border:1px solid var(--line);color:var(--ink);
+  border-radius:10px;padding:9px 12px;font:inherit}
+.custom-len span{color:var(--mut);font-size:.88rem}
+.go{width:100%;margin-top:22px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;
+  border:0;border-radius:14px;padding:16px;font:inherit;font-weight:700;font-size:1.02rem;cursor:pointer;
+  transition:.2s transform,.2s opacity}
+.go:not(:disabled):hover{transform:translateY(-1px)}
+.go:disabled{opacity:.35;cursor:not-allowed}
+.panel{display:none;text-align:center;padding:10px 4px}
+.panel.show{display:block;animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.panel .ic3{font-size:2.4rem;margin-bottom:10px}
+.bar{height:10px;background:var(--bg2);border-radius:99px;overflow:hidden;margin:18px 0 10px;border:1px solid var(--line)}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));
+  transition:width .35s ease;border-radius:99px}
+.pct{font-weight:700;font-size:1.3rem}
+.sub2{color:var(--mut);font-size:.9rem;margin-top:2px}
+.dl{display:inline-block;margin-top:18px;background:var(--ok);color:#08120d;font-weight:700;
+  border-radius:12px;padding:13px 26px;text-decoration:none}
+.err{display:none;background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.35);color:var(--err);
+  border-radius:12px;padding:12px 14px;margin-top:16px;font-size:.9rem}
+.err.show{display:block}
+h2.h2{font-size:1.5rem;text-align:center;margin:0 0 26px;letter-spacing:-.01em}
+.steps{display:grid;gap:14px}
+@media(min-width:640px){.steps{grid-template-columns:repeat(3,1fr)}}
+.step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;text-align:center}
+.step .n{color:var(--acc);font-weight:800;font-size:.8rem;letter-spacing:.06em}
+.step .ic4{font-size:1.8rem;margin:8px 0}
+.grid2{display:grid;gap:14px}
+@media(min-width:640px){.grid2{grid-template-columns:repeat(2,1fr)}}
+.adv{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+.adv .ic5{font-size:1.4rem;margin-bottom:6px}
+.adv b{display:block;margin-bottom:4px}
+.adv span{color:var(--mut);font-size:.88rem}
+details{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:600;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";float:right;color:var(--mut)}
+details[open] summary:after{content:"–"}
+details p{color:var(--mut);margin:10px 0 0;font-size:.92rem}
+footer{border-top:1px solid var(--line);padding:26px 0;text-align:center;color:var(--mut);font-size:.85rem}
+</style>
+</head>
+<body>
+
+<header><div class="wrap" style="display:flex;align-items:center;gap:10px">
+  <div class="logo">✂️</div><div class="name">Découpeur</div>
+</div></header>
+
+<div class="wrap">
+  <div class="hero">
+    <h1>Transforme tes vidéos en clips en quelques secondes.</h1>
+    <p>Découpe automatiquement tes longues vidéos en plusieurs clips prêts pour TikTok, YouTube Shorts et Instagram Reels.</p>
+    <div class="badges"><span>✓</span>&nbsp;Simple&nbsp;&nbsp;&nbsp;<span>✓</span>&nbsp;Rapide&nbsp;&nbsp;&nbsp;<span>✓</span>&nbsp;Gratuit</div>
+  </div>
+
+  <section style="padding-top:0">
+    <div class="card">
+
+      <div id="form">
+        <label class="drop" id="drop">
+          <input type="file" id="file" accept="video/*">
+          <div class="ic">🎬</div>
+          <b>Glisse ta vidéo ici</b>
+          <small>ou clique pour sélectionner un fichier</small>
+          <div style="margin-top:10px"><small>MP4, MOV, AVI, MKV — 500 Mo max</small></div>
+        </label>
+        <div class="file-info" id="fileInfo">
+          <div class="ic2">🎞️</div>
+          <div class="meta"><b id="fName"></b><span id="fMeta"></span></div>
+          <button id="fClear" type="button">Changer</button>
+        </div>
+
+        <div class="field">
+          <label>Durée de chaque clip</label>
+          <div class="quick" id="quick">
+            <button type="button" data-v="5">5s</button>
+            <button type="button" data-v="10" class="active">10s</button>
+            <button type="button" data-v="15">15s</button>
+            <button type="button" data-v="30">30s</button>
+            <button type="button" data-v="60">60s</button>
+          </div>
+          <div class="custom-len">
+            <input type="number" id="len" min="1" max="600" value="10">
+            <span>secondes personnalisées</span>
+          </div>
+        </div>
+
+        <button class="go" id="go" disabled>✂ Découper ma vidéo</button>
+        <div class="err" id="err"></div>
+      </div>
+
+      <div class="panel" id="panelWork">
+        <div class="ic3">🎬</div>
+        <b>Découpage de votre vidéo…</b>
+        <div class="bar"><i id="bar"></i></div>
+        <div class="pct" id="pct">0 %</div>
+        <div class="sub2" id="clipTxt">Préparation…</div>
+        <div class="sub2">Traitement de votre vidéo, veuillez patienter…</div>
+      </div>
+
+      <div class="panel" id="panelDone">
+        <div class="ic3">🎉</div>
+        <b id="doneTxt">Découpage terminé !</b>
+        <div><a class="dl" id="dlLink" href="#">📦 Télécharger le ZIP</a></div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h2">Comment ça marche</h2>
+    <div class="steps">
+      <div class="step"><div class="n">01</div><div class="ic4">📤</div><b>Importe ta vidéo</b></div>
+      <div class="step"><div class="n">02</div><div class="ic4">✂️</div><b>Choisis la durée des clips</b></div>
+      <div class="step"><div class="n">03</div><div class="ic4">📦</div><b>Télécharge tes clips</b></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h2">Pensé pour les créateurs</h2>
+    <div class="grid2">
+      <div class="adv"><div class="ic5">⚡</div><b>Rapide</b><span>Découpe automatiquement tes vidéos.</span></div>
+      <div class="adv"><div class="ic5">🎬</div><b>Simple</b><span>Aucune compétence en montage nécessaire.</span></div>
+      <div class="adv"><div class="ic5">📦</div><b>Tout-en-un</b><span>Tous tes clips regroupés dans un fichier ZIP.</span></div>
+      <div class="adv"><div class="ic5">📱</div><b>Compatible réseaux sociaux</b><span>Pensé pour créer facilement du contenu court.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="h2">Questions fréquentes</h2>
+    <details><summary>Quels formats vidéo sont acceptés ?</summary><p>Les formats courants comme MP4, MOV, AVI et MKV.</p></details>
+    <details><summary>Quelle est la taille maximale d'une vidéo ?</summary><p>500 Mo par vidéo.</p></details>
+    <details><summary>Combien de temps prend le découpage ?</summary><p>Ça dépend de la taille de la vidéo et du nombre de clips ; une barre de progression affiche l'avancement en direct.</p></details>
+    <details><summary>Où sont stockées mes vidéos ?</summary><p>Temporairement sur le serveur, uniquement le temps du traitement.</p></details>
+    <details><summary>Mes vidéos sont-elles supprimées après le traitement ?</summary><p>Oui, la vidéo d'origine est supprimée dès que le découpage est terminé.</p></details>
+  </section>
 </div>
-<div id="msg" role="status"></div>
-<div id="out"></div>
+
+<footer><div class="wrap">
+  <b>Découpeur</b> — Découpe tes vidéos simplement.<br>© 2026
+</div></footer>
+
+<video id="probe" muted playsinline style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"></video>
+
 <script>
 const $=id=>document.getElementById(id);
-$('go').onclick=async()=>{
-  const f=$('file').files[0];
-  if(!f){$('msg').textContent='Choisis d\u2019abord une vidéo.';return}
-  $('go').disabled=true;$('out').innerHTML='';
-  $('msg').textContent='Envoi et découpage en cours… ça peut prendre quelques minutes.';
-  const fd=new FormData();fd.append('video',f);fd.append('seconds',$('len').value||10);
-  try{
-    const r=await fetch('/cut',{method:'POST',body:fd});
-    if(!r.ok)throw new Error();
-    const url=URL.createObjectURL(await r.blob());
-    $('msg').textContent='Terminé !';
-    $('out').innerHTML='<a class="dl" download="clips.zip" href="'+url+'">Télécharger les clips (zip)</a>';
-  }catch(e){$('msg').textContent='Le découpage a échoué. Essaie avec une vidéo plus courte.'}
+let chosenFile=null, len=10, jobId=null, poller=null;
+
+function fmtSize(b){return b<1024*1024? (b/1024).toFixed(0)+" Ko" : (b/1024/1024).toFixed(1)+" Mo"}
+function fmtDur(s){return Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,'0')}
+function showErr(msg){$('err').textContent=msg;$('err').classList.add('show')}
+function clearErr(){$('err').classList.remove('show')}
+
+function setFile(f){
+  chosenFile=f;
+  $('fName').textContent=f.name;
+  $('fMeta').textContent=fmtSize(f.size);
+  $('fileInfo').classList.add('show');
   $('go').disabled=false;
+  clearErr();
+  const url=URL.createObjectURL(f), v=$('probe');
+  v.src=url;
+  v.onloadedmetadata=()=>{ $('fMeta').textContent=fmtSize(f.size)+' · '+fmtDur(v.duration); URL.revokeObjectURL(url) };
+}
+
+$('file').onchange=e=>{ if(e.target.files[0]) setFile(e.target.files[0]) };
+$('drop').addEventListener('dragover',e=>{e.preventDefault();$('drop').classList.add('drag')});
+$('drop').addEventListener('dragleave',()=>$('drop').classList.remove('drag'));
+$('drop').addEventListener('drop',e=>{
+  e.preventDefault();$('drop').classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(f) setFile(f);
+});
+$('fClear').onclick=e=>{
+  e.preventDefault();chosenFile=null;$('file').value='';
+  $('fileInfo').classList.remove('show');$('go').disabled=true;
 };
-</script></main></body></html>
+
+$('quick').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#quick button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); len=+b.dataset.v; $('len').value=len;
+});
+$('len').oninput=()=>{
+  len=+$('len').value||10;
+  document.querySelectorAll('#quick button').forEach(x=>x.classList.toggle('active',+x.dataset.v===len));
+};
+
+function friendlyError(status,data){
+  if(status===413) return "La vidéo est trop volumineuse.";
+  if(data && data.error) return data.error;
+  if(status===404) return "Session introuvable, réessaie.";
+  return "Une erreur est survenue pendant le découpage. Réessayez.";
+}
+
+async function poll(){
+  try{
+    const r=await fetch('/progress/'+jobId);
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok){ stopAndError(friendlyError(r.status,data)); return }
+    $('bar').style.width=data.progress+'%';
+    $('pct').textContent=data.progress+' %';
+    $('clipTxt').textContent = data.totalClips
+      ? 'Clip '+data.currentClip+' sur '+data.totalClips
+      : 'Préparation…';
+    if(data.status==='done'){
+      clearInterval(poller);
+      $('panelWork').classList.remove('show');
+      $('doneTxt').textContent = data.totalClips+' clips ont été créés avec succès.';
+      $('dlLink').href='/download/'+jobId;
+      $('panelDone').classList.add('show');
+    } else if(data.status==='error'){
+      stopAndError(data.error || "Une erreur est survenue pendant le découpage. Réessayez.");
+    }
+  }catch(e){ stopAndError("Connexion perdue pendant le découpage. Réessayez."); }
+}
+function stopAndError(msg){
+  clearInterval(poller);
+  $('panelWork').classList.remove('show');
+  $('form').style.display='block';
+  showErr(msg);
+}
+
+$('go').onclick=async()=>{
+  if(!chosenFile) return;
+  clearErr();
+  $('form').style.display='none';
+  $('panelDone').classList.remove('show');
+  $('panelWork').classList.add('show');
+  $('bar').style.width='0%';$('pct').textContent='0 %';$('clipTxt').textContent='Préparation…';
+
+  const fd=new FormData();
+  fd.append('video',chosenFile);
+  fd.append('seconds', len||10);
+  try{
+    const r=await fetch('/start',{method:'POST',body:fd});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok || !data.jobId){
+      $('panelWork').classList.remove('show');
+      $('form').style.display='block';
+      showErr(friendlyError(r.status,data));
+      return;
+    }
+    jobId=data.jobId;
+    poller=setInterval(poll,900);
+    poll();
+  }catch(e){
+    $('panelWork').classList.remove('show');
+    $('form').style.display='block';
+    showErr("Impossible d'envoyer la vidéo. Vérifie ta connexion et réessaie.");
+  }
+};
+</script>
+</body>
+</html>
