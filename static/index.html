@@ -233,3 +233,89 @@ function setFile(f){
 $('file').onchange=e=>{ if(e.target.files[0]) setFile(e.target.files[0]) };
 $('drop').addEventListener('dragover',e=>{e.preventDefault();$('drop').classList.add('drag')});
 $('drop').addEventListener('dragleave',()=>$('drop').classList.remove('drag'));
+$('drop').addEventListener('drop',e=>{
+  e.preventDefault();$('drop').classList.remove('drag');
+  const f=e.dataTransfer.files[0]; if(f) setFile(f);
+});
+$('fClear').onclick=e=>{
+  e.preventDefault();chosenFile=null;$('file').value='';
+  $('fileInfo').classList.remove('show');$('go').disabled=true;
+};
+
+$('quick').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#quick button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); len=+b.dataset.v; $('len').value=len;
+});
+$('len').oninput=()=>{
+  len=+$('len').value||10;
+  document.querySelectorAll('#quick button').forEach(x=>x.classList.toggle('active',+x.dataset.v===len));
+};
+
+function friendlyError(status,data){
+  if(status===413) return "La vidéo est trop volumineuse.";
+  if(data && data.error) return data.error;
+  if(status===404) return "Session introuvable, réessaie.";
+  return "Une erreur est survenue pendant le découpage. Réessayez.";
+}
+
+async function poll(){
+  try{
+    const r=await fetch('/progress/'+jobId);
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok){ stopAndError(friendlyError(r.status,data)); return }
+    $('bar').style.width=data.progress+'%';
+    $('pct').textContent=data.progress+' %';
+    $('clipTxt').textContent = data.totalClips
+      ? 'Clip '+data.currentClip+' sur '+data.totalClips
+      : 'Préparation…';
+    if(data.status==='done'){
+      clearInterval(poller);
+      $('panelWork').classList.remove('show');
+      $('doneTxt').textContent = data.totalClips+' clips ont été créés avec succès.';
+      $('dlLink').href='/download/'+jobId;
+      $('panelDone').classList.add('show');
+    } else if(data.status==='error'){
+      stopAndError(data.error || "Une erreur est survenue pendant le découpage. Réessayez.");
+    }
+  }catch(e){ stopAndError("Connexion perdue pendant le découpage. Réessayez."); }
+}
+function stopAndError(msg){
+  clearInterval(poller);
+  $('panelWork').classList.remove('show');
+  $('form').style.display='block';
+  showErr(msg);
+}
+
+$('go').onclick=async()=>{
+  if(!chosenFile) return;
+  clearErr();
+  $('form').style.display='none';
+  $('panelDone').classList.remove('show');
+  $('panelWork').classList.add('show');
+  $('bar').style.width='0%';$('pct').textContent='0 %';$('clipTxt').textContent='Préparation…';
+
+  const fd=new FormData();
+  fd.append('video',chosenFile);
+  fd.append('seconds', len||10);
+  try{
+    const r=await fetch('/start',{method:'POST',body:fd});
+    const data=await r.json().catch(()=>({}));
+    if(!r.ok || !data.jobId){
+      $('panelWork').classList.remove('show');
+      $('form').style.display='block';
+      showErr(friendlyError(r.status,data));
+      return;
+    }
+    jobId=data.jobId;
+    poller=setInterval(poll,900);
+    poll();
+  }catch(e){
+    $('panelWork').classList.remove('show');
+    $('form').style.display='block';
+    showErr("Impossible d'envoyer la vidéo. Vérifie ta connexion et réessaie.");
+  }
+};
+</script>
+</body>
+</html>
