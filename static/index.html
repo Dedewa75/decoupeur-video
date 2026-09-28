@@ -78,6 +78,9 @@ section{padding:36px 0}
 .panel.show{display:block;animation:fade .35s ease}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .panel .ic3{font-size:2.4rem;margin-bottom:10px}
+#panelWork.show .ic3{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.07);opacity:.85}}
+@media (prefers-reduced-motion: reduce){#panelWork.show .ic3{animation:none}}
 .bar{height:10px;background:var(--bg2);border-radius:99px;overflow:hidden;margin:18px 0 10px;border:1px solid var(--line)}
 .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--acc),var(--acc2));
   transition:width .35s ease;border-radius:99px}
@@ -160,11 +163,11 @@ footer{border-top:1px solid var(--line);padding:26px 0;text-align:center;color:v
 
       <div class="panel" id="panelWork">
         <div class="ic3">🎬</div>
-        <b>Découpage de votre vidéo…</b>
+        <b id="workLabel">Analyse de ta vidéo…</b>
         <div class="bar"><i id="bar"></i></div>
         <div class="pct" id="pct">0 %</div>
         <div class="sub2" id="clipTxt">Préparation…</div>
-        <div class="sub2">Traitement de votre vidéo, veuillez patienter…</div>
+        <div class="sub2" id="etaTxt"></div>
       </div>
 
       <div class="panel" id="panelDone">
@@ -213,7 +216,18 @@ footer{border-top:1px solid var(--line);padding:26px 0;text-align:center;color:v
 
 <script>
 const $=id=>document.getElementById(id);
-let chosenFile=null, len=10, jobId=null, poller=null;
+let chosenFile=null, len=10, jobId=null, poller=null, jobStart=null;
+
+function phaseLabel(p){
+  if(p<=0) return 'Analyse de ta vidéo…';
+  if(p<90) return 'Découpage en cours…';
+  return 'Finalisation…';
+}
+function fmtRemaining(sec){
+  if(sec<6) return 'Presque terminé…';
+  if(sec<60) return 'Encore environ '+Math.round(sec)+' s';
+  return 'Encore environ '+Math.round(sec/60)+' min';
+}
 
 function fmtSize(b){return b<1024*1024? (b/1024).toFixed(0)+" Ko" : (b/1024/1024).toFixed(1)+" Mo"}
 function fmtDur(s){return Math.floor(s/60)+":"+String(Math.floor(s%60)).padStart(2,'0')}
@@ -268,9 +282,16 @@ async function poll(){
     if(!r.ok){ stopAndError(friendlyError(r.status,data)); return }
     $('bar').style.width=data.progress+'%';
     $('pct').textContent=data.progress+' %';
+    $('workLabel').textContent=phaseLabel(data.progress);
     $('clipTxt').textContent = data.totalClips
       ? 'Clip '+data.currentClip+' sur '+data.totalClips
       : 'Préparation…';
+    if(data.progress>4 && data.progress<100 && jobStart){
+      const elapsed=(Date.now()-jobStart)/1000;
+      $('etaTxt').textContent=fmtRemaining(elapsed/data.progress*(100-data.progress));
+    } else if(data.progress<=4){
+      $('etaTxt').textContent='Estimation en cours…';
+    }
     if(data.status==='done'){
       clearInterval(poller);
       $('panelWork').classList.remove('show');
@@ -296,6 +317,8 @@ $('go').onclick=async()=>{
   $('panelDone').classList.remove('show');
   $('panelWork').classList.add('show');
   $('bar').style.width='0%';$('pct').textContent='0 %';$('clipTxt').textContent='Préparation…';
+  $('workLabel').textContent='Analyse de ta vidéo…';$('etaTxt').textContent='';
+  jobStart=Date.now();
 
   const fd=new FormData();
   fd.append('video',chosenFile);
@@ -320,4 +343,4 @@ $('go').onclick=async()=>{
 };
 </script>
 </body>
-     </html>
+</html>
